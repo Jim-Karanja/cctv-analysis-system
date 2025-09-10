@@ -1,0 +1,80 @@
+# CCTV Analysis System Configuration
+
+# Video Ingestion Settings
+video_ingestion:
+  buffer_size: 100
+  target_fps: 10
+
+# Preprocessing Settings  
+preprocessing:
+  target_size: [640, 480]
+  normalize: true
+  enhance_contrast: false
+  denoise: false
+  color_space: 'RGB'
+  quality_threshold: 0.5
+
+# AI Engine Settings
+ai_engine:
+  # Face Detection
+  detection:
+    method: 'dlib_hog'  # 'opencv_haar', 'dlib_hog', 'dlib_cnn'
+    min_face_size: [30, 30]
+    scale_factor: 1.1
+    min_neighbors: 5
+    confidence_threshold: 0.5
+    max_faces_per_frame: 10
+  
+  # Face Recognition
+  recognition:
+    recognition_tolerance: 0.6
+    num_jitters: 1
+    model: 'small'  # 'small' or 'large'
+    encodings_file: 'data/face_encodings.pkl'
+  
+  # Person Identification
+  min_detection_confidence: 0.5
+  min_recognition_confidence: 0.6
+  enable_tracking: false
+
+# Database Settings
+database:
+  personnel:
+    db_path: 'data/personnel.db'
+  events:
+    db_path: 'data/events.db'
+
+# Notification Settings
+notifications:
+  push_notifier:
+    fcm_api_key: 'your-fcm-api-key-here'
+    default_recipients:
+      - 'device-token-1'
+      - 'device-token-2'
+
+# Video Sources (examples)
+video_sources:
+  - source_id: 'camera_1'
+    url: 'rtsp://camera1.local/stream'
+    fps: 30
+    resolution: [1920, 1080]
+    enabled: true
+  - source_id: 'camera_2'
+    url: 0  # USB camera
+    fps: 30
+    resolution: [1280, 720]
+    enabled: false
+
+# Logging Settings
+logging:
+  level: 'INFO'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  file: 'logs/cctv_system.log'
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# Web Interface Settings (optional)
+web_interface:
+  host: '0.0.0.0'
+  port: 8080
+  debug: false

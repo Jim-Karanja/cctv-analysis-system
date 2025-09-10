@@ -1,0 +1,9 @@
+# Ubuntu/Linux requirements with full face recognition support
+# Install these AFTER installing the basic requirements.txt
+
+# Face Recognition (requires build tools on Ubuntu)
+dlib>=19.24.0
+face_recognition>=1.3.0
+
+# Additional ML libraries for advanced features
+scikit-learn>=1.3.0

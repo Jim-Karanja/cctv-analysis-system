@@ -92,12 +92,20 @@ class VideoProcessor:
         if not ret:
             source = self.video_sources[source_id]
             # Check if this is a video file (not a camera/stream)
-            if isinstance(source.url, str) and (source.url.endswith(('.mp4', '.avi', '.mov', '.mkv', '.wmv')) or '/' in source.url):
-                self.logger.info(f"End of video reached for {source_id}, looping back to start")
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Reset to beginning
-                ret, frame = cap.read()  # Try reading again
-                if not ret:
-                    self.logger.error(f"Failed to read frame even after reset for source: {source_id}")
+            if isinstance(source.url, str) and (source.url.endswith(('.mp4', '.avi', '.mov', '.mkv', '.wmv')) or ('/' in source.url and not source.url.startswith(('rtsp://', 'http://', 'https://')))):
+                # Check current position to avoid infinite loop at end
+                current_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                
+                if current_frame >= total_frames - 1:  # Near or at end of video
+                    self.logger.info(f"End of video reached for {source_id} (frame {current_frame}/{total_frames}), looping back to start")
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Reset to beginning
+                    ret, frame = cap.read()  # Try reading again
+                    if not ret:
+                        self.logger.error(f"Failed to read frame even after reset for source: {source_id}")
+                else:
+                    # Frame read failed but not at end - might be corruption or other issue
+                    self.logger.warning(f"Failed to read frame from source: {source_id} at frame {current_frame}")
             else:
                 self.logger.warning(f"Failed to read frame from source: {source_id}")
             

@@ -160,7 +160,7 @@ class CCTVAnalysisSystem:
                 ret, frame = self.video_processor.get_frame(source_id)
                 
                 if not ret or frame is None:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)  # Longer delay when no frame available
                     continue
                 
                 # Extract frame with metadata

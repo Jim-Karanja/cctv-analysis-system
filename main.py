@@ -147,6 +147,7 @@ class CCTVAnalysisSystem:
         Args:
             source_id: ID of the video source to process
         """
+        import time
         self.logger.info(f"Starting video processing for source: {source_id}")
         
         # Start video capture
@@ -154,8 +155,27 @@ class CCTVAnalysisSystem:
             self.logger.error(f"Failed to start capture for source: {source_id}")
             return
         
+        # Auto-termination after 1 minute (60 seconds) for testing
+        start_time = time.time()
+        auto_termination_seconds = 60
+        last_status_time = start_time
+        status_interval = 15  # Log progress every 15 seconds
+        
         try:
             while self.running:
+                # Check for auto-termination (1 minute for testing)
+                elapsed_time = time.time() - start_time
+                if elapsed_time >= auto_termination_seconds:
+                    self.logger.info(f"Auto-termination after {auto_termination_seconds} seconds - stopping system")
+                    self.running = False
+                    break
+                
+                # Periodic status update
+                if elapsed_time - last_status_time >= status_interval:
+                    remaining_time = auto_termination_seconds - elapsed_time
+                    self.logger.info(f"System running - {elapsed_time:.0f}s elapsed, {remaining_time:.0f}s remaining until auto-termination")
+                    last_status_time = elapsed_time
+                
                 # Get frame from video source
                 ret, frame = self.video_processor.get_frame(source_id)
                 

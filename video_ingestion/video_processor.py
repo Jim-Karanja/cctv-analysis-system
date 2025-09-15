@@ -88,8 +88,18 @@ class VideoProcessor:
         cap = self.active_captures[source_id]
         ret, frame = cap.read()
         
+        # If we can't read a frame (likely end of video file), try to loop back to start
         if not ret:
-            self.logger.warning(f"Failed to read frame from source: {source_id}")
+            source = self.video_sources[source_id]
+            # Check if this is a video file (not a camera/stream)
+            if isinstance(source.url, str) and (source.url.endswith(('.mp4', '.avi', '.mov', '.mkv', '.wmv')) or '/' in source.url):
+                self.logger.info(f"End of video reached for {source_id}, looping back to start")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Reset to beginning
+                ret, frame = cap.read()  # Try reading again
+                if not ret:
+                    self.logger.error(f"Failed to read frame even after reset for source: {source_id}")
+            else:
+                self.logger.warning(f"Failed to read frame from source: {source_id}")
             
         return ret, frame
     

@@ -23,7 +23,7 @@ except ImportError as e:
 from database import PersonnelManager, EventLogger
 from notification_service import NotificationManager
 from utils.logging_config import setup_logging
-from web_interface import start_web_server, update_system_status, add_detection_event
+from web_interface import start_web_server, update_system_status, add_detection_event, set_video_processor, update_current_frame
 
 
 class CCTVAnalysisSystem:
@@ -111,6 +111,9 @@ class CCTVAnalysisSystem:
             
             # Setup video sources
             self._setup_video_sources()
+            
+            # Set video processor for web streaming
+            set_video_processor(self.video_processor)
             
             self.logger.info("All components initialized successfully")
             
@@ -203,6 +206,23 @@ class CCTVAnalysisSystem:
                 identification_result = self.person_identifier.identify_persons_in_frame(
                     processed_frame, frame_metadata
                 )
+                
+                # Draw detection boxes on frame for web display
+                display_frame = frame.copy()
+                if identification_result.success and identification_result.identified_persons:
+                    import cv2
+                    for person in identification_result.identified_persons:
+                        x, y, w, h = person.bbox
+                        # Draw rectangle around face
+                        color = (0, 255, 0) if person.is_recognized else (0, 255, 255)  # Green if recognized, yellow if not
+                        cv2.rectangle(display_frame, (x, y), (x + w, y + h), color, 2)
+                        
+                        # Draw label
+                        label = person.person_name if person.is_recognized else f"Unknown ({person.detection_confidence:.2f})"
+                        cv2.putText(display_frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                
+                # Update frame with detections for web streaming
+                update_current_frame(display_frame)
                 
                 # Update statistics and log events
                 if identification_result.success and identification_result.identified_persons:

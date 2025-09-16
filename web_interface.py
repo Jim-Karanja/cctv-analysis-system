@@ -7,13 +7,15 @@ Provides a basic web interface to view system status and recent events.
 import asyncio
 import json
 import logging
+import cv2
+import base64
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 import uvicorn
 
 from database import EventLogger, PersonnelManager
@@ -32,6 +34,10 @@ system_status = {
 
 # Global event storage for real-time display
 recent_events = []
+
+# Global video processor reference for streaming
+video_processor = None
+current_frame = None
 
 class WebInterface:
     """Simple web interface for the CCTV system."""
@@ -124,6 +130,13 @@ async def get_dashboard():
                     </div>
                 </div>
                 <button class="refresh-btn" onclick="refreshStatus()">Refresh Status</button>
+            </div>
+            
+            <div class="status-card">
+                <h2>Live Video Feed</h2>
+                <div style="text-align: center;">
+                    <img id="video-stream" src="/video_feed" style="max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 8px;" alt="Video Stream">
+                </div>
             </div>
             
             <div class="status-card">
@@ -227,6 +240,35 @@ async def get_events():
     return []
 
 
+@app.get("/video_feed")
+async def video_feed():
+    """Video streaming endpoint."""
+    def generate_frames():
+        while True:
+            if current_frame is not None:
+                # Encode frame as JPEG
+                ret, buffer = cv2.imencode('.jpg', current_frame)
+                if ret:
+                    frame = buffer.tobytes()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            else:
+                # Send a blank frame if no video available
+                import numpy as np
+                blank = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(blank, 'No Video Signal', (150, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                ret, buffer = cv2.imencode('.jpg', blank)
+                if ret:
+                    frame = buffer.tobytes()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            
+            import time
+            time.sleep(0.033)  # ~30 FPS
+    
+    return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
 def update_system_status(status: str, active_cameras: List[str] = None, 
                         total_detections: int = None, recognized_persons: int = None):
     """Update system status from main application."""
@@ -260,6 +302,18 @@ def add_detection_event(camera_id: str, person_detections: List):
     # Keep only last 100 events to prevent memory issues
     if len(recent_events) > 100:
         recent_events = recent_events[-100:]
+
+
+def set_video_processor(processor):
+    """Set video processor reference for streaming."""
+    global video_processor
+    video_processor = processor
+
+
+def update_current_frame(frame):
+    """Update current frame for streaming."""
+    global current_frame
+    current_frame = frame.copy() if frame is not None else None
 
 
 async def start_web_server(config: dict):

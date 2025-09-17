@@ -1,0 +1,33 @@
+{
+  "enabled": true,
+  "auto_cleanup_interval_hours": 5,
+  "retention_policies": {
+    "security_events": {
+      "max_events": 1000,
+      "max_age_days": 30,
+      "keep_unauthorized_longer": true,
+      "unauthorized_max_age_days": 90,
+      "compress_old_events": true
+    },
+    "notification_logs": {
+      "max_events": 500,
+      "max_age_days": 14
+    },
+    "system_logs": {
+      "max_age_days": 7,
+      "max_file_size_mb": 10
+    },
+    "frames": {
+      "keep_latest_only": true,
+      "cleanup_temp_files": true,
+      "max_age_minutes": 60
+    }
+  },
+  "backup_before_cleanup": true,
+  "backup_retention_days": 7,
+  "memory_optimization": {
+    "compress_events": true,
+    "batch_process_size": 100,
+    "use_rotation": true
+  }
+}

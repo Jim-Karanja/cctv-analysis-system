@@ -1,0 +1,25 @@
+{
+  "system_status": "stopped",
+  "timestamp": 1758094497.3199494,
+  "datetime": "2025-09-17T10:34:57.319952",
+  "stats": {
+    "frames_processed": 198,
+    "detections_made": 226,
+    "unauthorized_alerts": 226,
+    "start_time": 1758094469.6420429,
+    "last_frame_time": 1758094496.9396405,
+    "processing_fps": 7.275473595825554,
+    "capture_fps": 27.818634850978846
+  },
+  "personnel_count": 3,
+  "camera_stats": {},
+  "recent_events_count": 100,
+  "unauthorized_alerts": [
+    {
+      "person_name": "Unknown Person",
+      "authorized": false,
+      "confidence": 0.7,
+      "timestamp": 1758094496.9319606,
+      "datetime": "2025-09-17T10:34:56.931961",
+      "bbox": [
+        

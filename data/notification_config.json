@@ -1,0 +1,65 @@
+{
+  "enabled": true,
+  "alert_methods": {
+    "email": {
+      "enabled": true,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "username": "Jimmy",
+      "password": "Smejak12@@",
+      "from_email": "thanjukaranja78@gmail.com",
+      "to_email": "thanjukaranja78@gmail.com",
+      "subject_prefix": "[CCTV Alert]"
+    },
+    "sms": {
+      "enabled": false,
+      "service": "twilio",
+      "api_key": "",
+      "api_secret": "",
+      "from_number": "",
+      "to_number": ""
+    },
+    "pushbullet": {
+      "enabled": true,
+      "access_token": "o.fh4zJPNL9ciG1Zf7vLqv52NDDC5IMqrB",
+      "device_iden": ""
+    },
+    "telegram": {
+      "enabled": false,
+      "bot_token": "",
+      "chat_id": ""
+    },
+    "webhook": {
+      "enabled": false,
+      "url": "",
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    "discord": {
+      "enabled": false,
+      "webhook_url": ""
+    }
+  },
+  "alert_settings": {
+    "send_on_unauthorized": true,
+    "send_on_system_start": true,
+    "send_on_system_error": true,
+    "minimum_interval_seconds": 60,
+    "alert_cooldown": 300,
+    "include_screenshot": true,
+    "alert_severity_levels": {
+      "LOW": false,
+      "MEDIUM": true,
+      "HIGH": true,
+      "CRITICAL": true
+    }
+  },
+  "mobile_settings": {
+    "quick_setup_mode": true,
+    "preferred_method": "pushbullet",
+    "backup_method": "pushbullet",
+    "test_alerts": true
+  }
+}

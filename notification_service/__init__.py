@@ -1,10 +1,11 @@
 """
-Notification Service Module
-
-Handles notification triggers and mobile push notifications.
+CCTV Analysis System - Notification Service
+Mobile alert and notification management for security events.
 """
 
 from .notification_manager import NotificationManager
-from .push_notifier import PushNotifier
+from .mobile_alerts import MobileAlertService
+from .config_manager import NotificationConfig
 
-__all__ = ['NotificationManager', 'PushNotifier']
+__all__ = ['NotificationManager', 'MobileAlertService', 'NotificationConfig']
+__version__ = '1.0.0'

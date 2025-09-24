@@ -1,133 +1,286 @@
-# CCTV Analysis and Notification System
+# CCTV Analysis System - Windows Installation Guide (Conda)
 
-An AI-powered CCTV analysis system that identifies authorized personnel and sends real-time notifications.
+## 🚀 Quick Start for Windows Users
 
-## Overview
+This guide will help you set up and launch the CCTV Analysis System on Windows using Anaconda/Miniconda.
 
-This system combines computer vision, database management, and notification services to create a comprehensive security monitoring solution. It processes CCTV video feeds in real-time to identify known personnel and trigger appropriate notifications.
+## 📋 Prerequisites
 
-## System Architecture
+### 1. Install Miniconda (Recommended) or Anaconda
+- **Option A - Miniconda (Lightweight, Recommended):**
+  - Download from: https://docs.conda.io/en/latest/miniconda.html
+  - Select "Miniconda3 Windows 64-bit" installer
+  
+- **Option B - Full Anaconda:**
+  - Download from: https://www.anaconda.com/products/distribution
+  - Select Windows installer
 
-### 1. Video Ingestion & Processing (`video_ingestion/`)
-- **Video Source**: CCTV camera feed acquisition
-- **Frame Extraction**: Real-time video stream processing
-- **Preprocessing**: Frame preparation for AI analysis
+### 2. System Requirements
+- Windows 10/11 (64-bit)
+- 8GB RAM (minimum), 16GB+ recommended
+- 2GB free disk space
+- USB camera or IP camera for testing
 
-### 2. AI & Recognition Engine (`ai_engine/`)
-- **Face Detection**: Locate faces within video frames
-- **Face Recognition**: Generate unique facial embeddings
-- **Person Identification**: Match faces to known personnel database
+## 🛠️ Installation Steps
 
-### 3. Database (`database/`)
-- **Personnel Database**: Store registered user profiles and facial embeddings
-- **Event Logging**: Record all detection events with timestamps and confidence scores
+### Step 1: Open Anaconda Prompt
+1. Press `Windows + R`, type `cmd`, press Enter
+2. Or search "Anaconda Prompt" in Start Menu and run as Administrator
 
-### 4. Notification Service (`notification_service/`)
-- **Event Triggers**: Monitor for specific conditions
-- **Mobile Notifications**: Real-time alerts via push notifications
-
-## Technology Stack
-
-- **Computer Vision**: OpenCV, Dlib, face_recognition
-- **Database**: PostgreSQL/MongoDB for scalable data storage
-- **Notifications**: Firebase Cloud Messaging (FCM)
-- **Backend**: Python with asyncio for real-time processing
-
-## Features
-
-- **Dual Mode Operation**: 
-  - Basic mode: OpenCV-only face detection (works on any platform)
-  - Advanced mode: Full face recognition with dlib (recommended for Ubuntu)
-- **Real-time Processing**: Asynchronous video stream processing
-- **Web Interface**: FastAPI-based dashboard at http://localhost:8080
-- **Multiple Camera Support**: USB cameras, IP cameras, RTSP streams
-- **Flexible Configuration**: YAML-based configuration system
-
-## Installation
-
-### Windows (Basic Mode - Detection Only)
-
-1. Clone the repository:
+### Step 2: Clone the Repository
 ```bash
-git clone <repository-url>
+# Navigate to your desired directory
+cd C:\Users\%USERNAME%\
+git clone https://github.com/yourusername/cctv-analysis-system.git
 cd cctv-analysis-system
 ```
 
-2. Install basic dependencies:
+### Step 3: Create Conda Environment
 ```bash
-pip install opencv-python fastapi uvicorn pyyaml numpy
+# Create a new conda environment with Python 3.9
+conda create -n cctv-system python=3.9 -y
+
+# Activate the environment
+conda activate cctv-system
 ```
 
-3. Configure the system:
+### Step 4: Install Dependencies via Conda
 ```bash
+# Install core packages from conda-forge
+conda install -c conda-forge opencv numpy pillow pyyaml requests -y
+
+# Install additional packages via pip
+pip install fastapi==0.103.1
+pip install uvicorn[standard]==0.23.2
+pip install asyncio-mqtt==0.11.1
+pip install aiofiles==23.2.1
+pip install pyfcm==1.5.4
+pip install python-dotenv==1.0.0
+pip install structlog==23.1.0
+pip install prometheus-client==0.17.1
+pip install click==8.1.7
+pip install tqdm==4.66.1
+pip install python-dateutil==2.8.2
+pip install pytest==7.4.2
+```
+
+### Step 5: Configure the System
+```bash
+# Copy example configuration
 copy config\config.example.yaml config\config.yaml
-# Edit config.yaml with your camera settings
+
+# Open configuration file in notepad for editing
+notepad config\config.yaml
 ```
 
-### Ubuntu (Advanced Mode - Full Recognition)
+**Important Configuration Changes:**
+- Set `video_sources` → `url` to `0` for USB camera or your IP camera URL
+- Adjust `web_interface` → `host` to `127.0.0.1` for local access only
+- Modify `logging` → `file` path to use Windows path format
 
-1. Install system dependencies:
+### Step 6: Create Required Directories
 ```bash
-sudo apt update
-sudo apt install -y git python3-venv build-essential cmake python3-dev
+# Create necessary directories
+mkdir data
+mkdir logs
+mkdir uploads
 ```
 
-2. Clone and setup:
+## 🚀 Launch the System
+
+### Option 1: Automated Launcher (Recommended)
 ```bash
-git clone <repository-url>
-cd cctv-analysis-system
-python3 -m venv .venv
-source .venv/bin/activate
+# Make sure conda environment is activated
+conda activate cctv-system
+
+# Run the system launcher
+python launch_system.py
 ```
 
-3. Install Python dependencies:
+This will open two separate command windows:
+- **Web Server Window**: Runs the web interface
+- **Video Capture Window**: Handles camera processing
+
+### Option 2: Manual Launch (For Debugging)
+
+**Terminal 1 - Web Server:**
 ```bash
-pip install opencv-python fastapi uvicorn pyyaml numpy
-# For full face recognition:
-pip install dlib face_recognition
+conda activate cctv-system
+python improved_web_server.py
 ```
 
-4. Configure the system:
+**Terminal 2 - Video Capture:**
 ```bash
-cp config/config.example.yaml config/config.yaml
-# Edit config.yaml with your camera settings
+conda activate cctv-system
+python security_video_capture.py
 ```
 
-## Usage
+## 🌐 Access the System
 
-1. Start the main application:
+1. **Web Interface**: Open browser and go to `http://localhost:8080`
+2. **API Documentation**: Visit `http://localhost:8080/docs`
+
+## 🔧 Troubleshooting
+
+### Camera Not Detected
 ```bash
-python main.py
+# Test camera access
+python -c "import cv2; cap = cv2.VideoCapture(0); print('Camera OK' if cap.read()[0] else 'Camera Failed'); cap.release()"
 ```
 
-2. Access the web interface at `http://localhost:8080`
-
-## Configuration
-
-Edit `config/config.yaml` to customize:
-- Camera sources and settings
-- Database connection details
-- Notification service credentials
-- AI model parameters
-
-## Testing
-
-Run the test suite:
+### Port Already in Use
 ```bash
-python -m pytest tests/
+# Kill process using port 8080
+netstat -ano | findstr :8080
+# Note the PID and kill it
+taskkill /PID [PID_NUMBER] /F
 ```
 
-## Security Considerations
+### Missing Visual C++ Redistributable
+If you get errors about missing DLLs:
+1. Download Visual C++ Redistributable from Microsoft
+2. Install both x86 and x64 versions
 
-- All facial data is encrypted at rest
-- Network communications use TLS encryption
-- Access controls implemented for all system components
-- Regular security audits recommended
+### OpenCV Issues
+```bash
+# Reinstall OpenCV if issues occur
+conda uninstall opencv -y
+conda install -c conda-forge opencv -y
+```
 
-## License
+## 🏗️ Environment Management
 
-[Your License Here]
+### Save Current Environment
+```bash
+# Export environment to YAML file
+conda env export > environment.yml
+```
 
-## Contributing
+### Recreate Environment from YAML
+```bash
+# Create environment from exported file
+conda env create -f environment.yml
+```
 
-[Contributing Guidelines Here]
+### Update Environment
+```bash
+# Update all packages
+conda activate cctv-system
+conda update --all -y
+```
+
+### Remove Environment
+```bash
+# Deactivate and remove environment
+conda deactivate
+conda env remove -n cctv-system
+```
+
+## 🎯 Testing the Installation
+
+### Test 1: Basic System Check
+```bash
+conda activate cctv-system
+python -c "import cv2, fastapi, uvicorn; print('✅ All core modules imported successfully')"
+```
+
+### Test 2: Camera Test
+```bash
+conda activate cctv-system
+python -c "
+import cv2
+cap = cv2.VideoCapture(0)
+ret, frame = cap.read()
+if ret:
+    print('✅ Camera working - Resolution:', frame.shape)
+else:
+    print('❌ Camera not detected')
+cap.release()
+"
+```
+
+### Test 3: Web Server Test
+```bash
+conda activate cctv-system
+# Start web server (Ctrl+C to stop)
+python -c "
+import uvicorn
+from improved_web_server import app
+print('🌐 Starting test web server on http://localhost:8080')
+uvicorn.run(app, host='127.0.0.1', port=8080, log_level='info')
+"
+```
+
+## 🔐 Security Notes
+
+- **Firewall**: Windows may prompt to allow Python through firewall - click "Allow"
+- **Network Access**: By default, system runs on localhost only
+- **Camera Privacy**: Green LED indicates when camera is active
+
+## 📁 Project Structure
+```
+cctv-analysis-system/
+├── config/
+│   ├── config.yaml           # Main configuration
+│   └── config.example.yaml   # Example configuration
+├── data/                     # Data storage
+├── logs/                     # System logs
+├── notification_service/     # Alert system
+├── launch_system.py          # Main launcher
+├── improved_web_server.py    # Web interface
+├── security_video_capture.py # Camera processing
+└── requirements.txt          # Python dependencies
+```
+
+## 🚪 System Shutdown
+
+### Graceful Shutdown
+1. Close web browser
+2. Press `Ctrl+C` in both terminal windows
+3. Close terminal windows
+
+### Force Shutdown
+```bash
+# Kill all Python processes (use with caution)
+taskkill /f /im python.exe
+```
+
+## 📞 Getting Help
+
+1. **Check Logs**: Look in `logs/cctv_system.log` for errors
+2. **Verbose Mode**: Edit config.yaml and set `logging.level` to `DEBUG`
+3. **Test Mode**: Run with single camera first before adding multiple sources
+
+## 🔄 Updates and Maintenance
+
+### Update System Code
+```bash
+conda activate cctv-system
+git pull origin main
+pip install -r requirements.txt --upgrade
+```
+
+### Clean Cache and Logs
+```bash
+# Clear Python cache
+for /d /r . %d in (__pycache__) do @if exist "%d" rd /s /q "%d"
+
+# Clear old logs (optional)
+del /q logs\*.log.1
+del /q logs\*.log.2
+```
+
+## 🎉 Success Indicators
+
+When everything is working correctly, you should see:
+- ✅ Two command windows open automatically
+- ✅ Web interface accessible at http://localhost:8080
+- ✅ Camera feed visible in web browser
+- ✅ No error messages in terminal windows
+- ✅ Logs being written to `logs/` directory
+
+---
+
+**🎯 Pro Tip**: Always activate the conda environment (`conda activate cctv-system`) before running any system commands!
+
+**⚠️ Note**: For face recognition features, you may need to install additional packages like `dlib` which can be challenging on Windows. The system will work with basic face detection using OpenCV only.

@@ -2,6 +2,7 @@
 opencv-python>=4.8.0
 numpy>=1.24.0
 Pillow>=10.0.0
+conda>=22.9.0
 
 # Optional: For full face recognition (Ubuntu/Linux recommended)
 # face-recognition>=1.3.0

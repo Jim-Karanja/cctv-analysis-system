@@ -15,6 +15,14 @@ from pathlib import Path
 from datetime import datetime
 from threaded_video_capture import ThreadedVideoCapture
 
+# Import face recognition system
+try:
+    from face_recognition_system import FaceRecognitionSystem
+    FACE_RECOGNITION_AVAILABLE = True
+except ImportError:
+    FACE_RECOGNITION_AVAILABLE = False
+    print("⚠️  Advanced face recognition not available - using basic template matching")
+
 # Import notification system and data cleanup
 try:
     from notification_service import NotificationManager
@@ -40,13 +48,14 @@ class ThreadedSecurityCapture:
     def __init__(self):
         self.running = False
         self.face_cascade = None
+        self.face_recognition_system = None
         self.security_events = []
         self.threaded_capture = None
         self.notification_manager = None
         self.cleanup_manager = None
         self.auto_cleanup_service = None
         
-        # Face recognition data
+        # Legacy face recognition data (fallback)
         self.known_faces = []
         self.known_names = []
         self.face_templates = []
@@ -59,7 +68,10 @@ class ThreadedSecurityCapture:
         Path("data").mkdir(exist_ok=True)
         Path("data/personnel").mkdir(exist_ok=True)
         
-        # Initialize face detection
+        # Initialize advanced face recognition system
+        self._init_face_recognition()
+        
+        # Initialize basic face detection (fallback)
         self._init_face_detection()
         
         # Initialize notification system
@@ -74,6 +86,21 @@ class ThreadedSecurityCapture:
     def _signal_handler(self, signum, frame):
         print(f"\n🛑 Received signal {signum}, stopping threaded security video capture...")
         self.running = False
+    
+    def _init_face_recognition(self):
+        """Initialize advanced face recognition system."""
+        if FACE_RECOGNITION_AVAILABLE:
+            try:
+                self.face_recognition_system = FaceRecognitionSystem()
+                logger.info(f"Advanced face recognition initialized with {len(self.face_recognition_system.known_face_names)} known faces")
+                print(f"🎯 Advanced face recognition loaded: {', '.join(self.face_recognition_system.known_face_names)}")
+            except Exception as e:
+                logger.error(f"Face recognition init error: {e}")
+                self.face_recognition_system = None
+                print("⚠️  Falling back to basic template matching")
+        else:
+            logger.info("Advanced face recognition not available")
+            self.face_recognition_system = None
     
     def _init_face_detection(self):
         """Initialize face detection."""
@@ -181,82 +208,98 @@ class ThreadedSecurityCapture:
         return len(image_files)
     
     def detect_faces(self, frame):
-        """Detect faces in frame and create security events."""
-        if self.face_cascade is None:
-            return []
-        
+        """Detect faces in frame and create security events using advanced face recognition."""
         try:
-            # Convert to grayscale
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            # Detect faces
-            faces = self.face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                minSize=(30, 30)
-            )
-            
             events = []
-            personnel_count = self.get_authorized_personnel_count()
             
-            for (x, y, w, h) in faces:
-                # Extract face region for matching
-                face_roi = gray[y:y+h, x:x+w]
-                face_resized = cv2.resize(face_roi, (100, 100))
+            # Use advanced face recognition if available
+            if self.face_recognition_system is not None:
+                # Use the advanced face recognition system
+                recognition_results = self.face_recognition_system.recognize_faces(frame)
                 
-                # Match against known personnel faces
-                best_match_score = 0
-                best_match_name = "Unknown Person"
-                authorized = False
+                for result in recognition_results:
+                    # Convert face_recognition_system results to our event format
+                    event = {
+                        'person_name': result.get('person_name', 'Unknown Person'),
+                        'authorized': result.get('authorized', False),
+                        'confidence': float(result.get('confidence', 0.0)),
+                        'timestamp': float(time.time()),
+                        'datetime': datetime.now().isoformat(),
+                        'bbox': result.get('bbox', [0, 0, 0, 0]),
+                        'alert_level': 'LOW' if result.get('authorized', False) else 'HIGH'
+                    }
+                    
+                    logger.info(f"👤 Advanced recognition: {event['person_name']} - {'AUTHORIZED' if event['authorized'] else 'UNAUTHORIZED'} (confidence: {event['confidence']:.3f})")
+                    events.append(event)
+            
+            # Fallback to basic face detection if advanced system not available
+            elif self.face_cascade is not None:
+                # Convert to grayscale
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 
-                if len(self.face_templates) > 0:
-                    # Compare with each known face template
-                    for i, template in enumerate(self.face_templates):
-                        try:
-                            # Use template matching
-                            result = cv2.matchTemplate(face_resized, template, cv2.TM_CCOEFF_NORMED)
-                            _, max_val, _, _ = cv2.minMaxLoc(result)
+                # Detect faces
+                faces = self.face_cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=1.1,
+                    minNeighbors=5,
+                    minSize=(30, 30)
+                )
+                
+                for (x, y, w, h) in faces:
+                    # Extract face region for matching
+                    face_roi = gray[y:y+h, x:x+w]
+                    face_resized = cv2.resize(face_roi, (100, 100))
+                    
+                    # Match against known personnel faces
+                    best_match_score = 0
+                    best_match_name = "Unknown Person"
+                    authorized = False
+                    
+                    if len(self.face_templates) > 0:
+                        # Compare with each known face template
+                        for i, template in enumerate(self.face_templates):
+                            try:
+                                # Use template matching
+                                result = cv2.matchTemplate(face_resized, template, cv2.TM_CCOEFF_NORMED)
+                                _, max_val, _, _ = cv2.minMaxLoc(result)
+                                
+                                # Check if this is the best match
+                                if max_val > best_match_score:
+                                    best_match_score = max_val
+                                    best_match_name = self.known_names[i]
                             
-                            # Check if this is the best match
-                            if max_val > best_match_score:
-                                best_match_score = max_val
-                                best_match_name = self.known_names[i]
+                            except Exception as e:
+                                logger.debug(f"Template matching error: {e}")
                         
-                        except Exception as e:
-                            logger.debug(f"Template matching error: {e}")
-                    
-                    # Determine if it's authorized (threshold for recognition)
-                    recognition_threshold = 0.25  # Adjusted for real-world lighting conditions
-                    
-                    # Detailed logging for recognition scores
-                    logger.info(f"👤 Face detected - Best match: {best_match_name} (score: {best_match_score:.3f}, threshold: {recognition_threshold})")
-                    
-                    if best_match_score > recognition_threshold:
-                        authorized = True
-                        person_name = best_match_name
-                        confidence = float(best_match_score)
+                        # Determine if it's authorized (threshold for recognition)
+                        recognition_threshold = 0.25  # Adjusted for real-world lighting conditions
+                        
+                        if best_match_score > recognition_threshold:
+                            authorized = True
+                            person_name = best_match_name
+                            confidence = float(best_match_score)
+                        else:
+                            authorized = False
+                            person_name = "Unknown Person"
+                            confidence = float(best_match_score)
                     else:
+                        # No personnel templates = all unknown
                         authorized = False
                         person_name = "Unknown Person"
-                        confidence = float(best_match_score)
-                else:
-                    # No personnel templates = all unknown
-                    authorized = False
-                    person_name = "Unknown Person"
-                    confidence = 0.0
-                
-                event = {
-                    'person_name': person_name,
-                    'authorized': bool(authorized),  # Ensure boolean is JSON serializable
-                    'confidence': float(confidence),  # Ensure float is JSON serializable
-                    'timestamp': float(time.time()),  # Ensure timestamp is JSON serializable
-                    'datetime': datetime.now().isoformat(),
-                    'bbox': [int(x), int(y), int(w), int(h)],  # Convert to int for JSON
-                    'alert_level': 'LOW' if authorized else 'HIGH'
-                }
-                
-                events.append(event)
+                        confidence = 0.0
+                    
+                    event = {
+                        'person_name': person_name,
+                        'authorized': bool(authorized),
+                        'confidence': float(confidence),
+                        'timestamp': float(time.time()),
+                        'datetime': datetime.now().isoformat(),
+                        'bbox': [int(x), int(y), int(w), int(h)],
+                        'alert_level': 'LOW' if authorized else 'HIGH'
+                    }
+                    
+                    logger.info(f"👤 Basic recognition: {person_name} - {'AUTHORIZED' if authorized else 'UNAUTHORIZED'} (confidence: {confidence:.3f})")
+                    events.append(event)
             
             return events
             
@@ -319,15 +362,19 @@ class ThreadedSecurityCapture:
         """Main capture loop using threaded video capture."""
         print("🔒 Threaded Security Video Capture")
         print("🧵 Using threaded video capture for improved performance")
-        print("🔍 Using OpenCV face detection with template matching recognition")
+        if self.face_recognition_system is not None:
+            print("🎯 Using ADVANCED face recognition with dlib encodings")
+            recognition_count = len(self.face_recognition_system.known_face_names)
+            print(f"👥 {recognition_count} personnel loaded for advanced recognition: {', '.join(self.face_recognition_system.known_face_names)}")
+        else:
+            print("🔍 Using basic OpenCV face detection with template matching")
+            template_count = len(self.face_templates)
+            print(f"👥 {template_count} face templates loaded for basic recognition")
         print("📊 Faces will be compared against authorized personnel photos")
         print("⏹️  Press Ctrl+C to stop")
         print("=" * 60)
         
         personnel_count = self.get_authorized_personnel_count()
-        template_count = len(self.face_templates)
-        print(f"👥 {personnel_count} authorized personnel photos found")
-        print(f"🎯 {template_count} face templates loaded for recognition")
         
         if personnel_count == 0:
             print("⚠️  No authorized personnel photos in data/personnel/")
